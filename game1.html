@@ -2,7 +2,8 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <title>依序點數字小遊戲</title>
+  <title>順序點 - Number Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     * {
       box-sizing: border-box;
@@ -16,25 +17,47 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 12px;
       background: radial-gradient(circle at top, #fdfbfb, #ebedee);
       font-size: 16px;
     }
 
     .game-container {
       background: #ffffff;
-      padding: 26px 26px 22px;
+      padding: 22px 18px 18px;
       border-radius: 18px;
       box-shadow: 0 14px 35px rgba(15, 23, 42, 0.18);
-      width: min(520px, 92vw);
+      width: min(540px, 100%);
       position: relative;
       overflow: hidden;
+    }
+
+    /* 手機上讓遊戲區域更大 */
+    @media (max-width: 600px) {
+      body {
+        align-items: stretch;
+        padding: 0;
+      }
+      .game-container {
+        width: 100%;
+        min-height: 100vh;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 18px 12px 16px;
+      }
+      .title {
+        font-size: 22px;
+      }
+      .cell {
+        font-size: clamp(22px, 7vw, 30px);
+      }
     }
 
     .game-header {
       display: flex;
       flex-direction: column;
       gap: 4px;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
 
     .title-row {
@@ -45,7 +68,7 @@
     }
 
     .title {
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 700;
       letter-spacing: 0.04em;
     }
@@ -81,7 +104,7 @@
       display: flex;
       gap: 8px;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       font-size: 14px;
       color: #475569;
     }
@@ -149,7 +172,7 @@
       justify-content: center;
       cursor: pointer;
       font-weight: 700;
-      font-size: 22px;
+      font-size: 24px;
       color: #1d4ed8;
       user-select: none;
       box-shadow: 0 2px 0 rgba(15, 23, 42, 0.1);
@@ -204,6 +227,20 @@
 
     .message.success {
       color: #15803d;
+    }
+
+    .back-link {
+      margin-top: 6px;
+      font-size: 13px;
+    }
+
+    .back-link a {
+      color: #3b82f6;
+      text-decoration: none;
+    }
+
+    .back-link a:hover {
+      text-decoration: underline;
     }
 
     /* 完成動畫 */
@@ -265,8 +302,8 @@
   <div class="game-container" id="gameContainer">
     <div class="game-header">
       <div class="title-row">
-        <div class="title">依序點數字</div>
-        <div class="subtitle">點錯會嗶一下，但還可以繼續挑戰</div>
+        <div class="title">順序點</div>
+        <div class="subtitle">依序 1 → 2 → 3 … 點完全部</div>
       </div>
       <div class="status-row">
         <div class="status-label">
@@ -295,6 +332,7 @@
     </div>
 
     <div class="message" id="message"></div>
+    <div class="back-link"><a href="index.html">← 回遊戲選單</a></div>
   </div>
 
   <script>
@@ -478,7 +516,6 @@
     resetBtn.addEventListener("click", resetGame);
     sizeInput.addEventListener("change", resetGame);
 
-    // 使用者第一次互動時才初始化 AudioContext（避免瀏覽器阻擋）
     window.addEventListener(
       "pointerdown",
       () => {
@@ -487,7 +524,6 @@
       { once: true }
     );
 
-    // 初始載入
     resetGame();
   </script>
 </body>
