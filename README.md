@@ -63,8 +63,8 @@
 ```text
 number-game/
 ├── index.html
-├── sequence.html
-├── random.html
+├── game1.html
+├── game2.html
 └── README.md
 ```
 
