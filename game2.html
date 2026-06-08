@@ -106,13 +106,14 @@
       margin-bottom: 10px;
       font-size: 14px;
       color: #475569;
+      flex-wrap: wrap;
     }
 
     .controls label {
       white-space: nowrap;
     }
 
-    .controls input {
+    .controls input[type="number"] {
       width: 70px;
       padding: 5px 8px;
       border-radius: 999px;
@@ -121,9 +122,25 @@
       font-size: 14px;
     }
 
-    .controls input:focus {
+    .controls input[type="number"]:focus {
       border-color: #3b82f6;
       box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
+    }
+
+    .timer-option {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .timer-option input {
+      width: auto;
+    }
+
+    .timer-display {
+      font-weight: 700;
+      color: #0f172a;
+      min-width: 72px;
     }
 
     .controls button {
@@ -320,6 +337,14 @@
         step="1"
         value="4"
       />
+
+      <label class="timer-option">
+        <input type="checkbox" id="timerChallenge" />
+        計時挑戰
+      </label>
+
+      <span id="timerDisplay" class="timer-display">00:00.00</span>
+
       <button id="resetBtn">再一次</button>
     </div>
 
@@ -341,6 +366,8 @@
     const resetBtn = document.getElementById("resetBtn");
     const container = document.getElementById("gameContainer");
     const fireworksEl = document.getElementById("fireworks");
+    const timerChallenge = document.getElementById("timerChallenge");
+    const timerDisplay = document.getElementById("timerDisplay");
 
     let n = 4;
     let maxNumber = n * n;
@@ -348,6 +375,11 @@
     let targetNumber = null;
     let completed = false;
     let audioCtx = null;
+
+    let timerStarted = false;
+    let timerStartTime = 0;
+    let timerInterval = null;
+    let elapsedTime = 0;
 
     function initAudio() {
       if (!audioCtx) {
@@ -393,6 +425,50 @@
       playTone(220, 0.22, "square", 0.22);
     }
 
+    function formatTime(ms) {
+      const totalSeconds = ms / 1000;
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = Math.floor(totalSeconds % 60);
+      const centiseconds = Math.floor((ms % 1000) / 10);
+
+      return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
+        2,
+        "0"
+      )}.${String(centiseconds).padStart(2, "0")}`;
+    }
+
+    function startTimer() {
+      if (!timerChallenge.checked || timerStarted) return;
+
+      timerStarted = true;
+      timerStartTime = performance.now();
+
+      timerInterval = setInterval(() => {
+        elapsedTime = performance.now() - timerStartTime;
+        timerDisplay.textContent = formatTime(elapsedTime);
+      }, 30);
+    }
+
+    function stopTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+
+      if (timerStarted) {
+        elapsedTime = performance.now() - timerStartTime;
+        timerDisplay.textContent = formatTime(elapsedTime);
+      }
+    }
+
+    function resetTimer() {
+      stopTimer();
+      timerStarted = false;
+      timerStartTime = 0;
+      elapsedTime = 0;
+      timerDisplay.textContent = "00:00.00";
+    }
+
     function shuffle(array) {
       for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -407,6 +483,7 @@
         targetNumberLabel.textContent = "-";
         return;
       }
+
       const idx = Math.floor(Math.random() * remainingNumbers.length);
       targetNumber = remainingNumbers[idx];
       targetNumberLabel.textContent = targetNumber;
@@ -438,6 +515,7 @@
       for (let i = 1; i <= maxNumber; i++) {
         remainingNumbers.push(i);
       }
+
       pickNextTarget();
 
       messageEl.textContent = "看上面題目，目前指定要點的數字。";
@@ -449,14 +527,15 @@
 
     function onCellClick(e) {
       if (completed) return;
+
       const cell = e.currentTarget;
       const value = parseInt(cell.dataset.value, 10);
 
-      // 已經被點過的格子（correct+disabled）就不再處理
       if (cell.classList.contains("disabled")) return;
 
       if (value === targetNumber) {
-        // 點對：鎖定這格，從 remaining 中移除，再抽下一個
+        startTimer();
+
         cell.classList.add("correct", "disabled");
         remainingNumbers = remainingNumbers.filter((v) => v !== value);
 
@@ -482,11 +561,17 @@
     }
 
     function handleComplete() {
+      stopTimer();
+
       completed = true;
       statusBadge.textContent = "挑戰成功";
       statusBadge.style.background = "#dcfce7";
       statusBadge.style.color = "#15803d";
-      messageEl.textContent = "全部指定的數字都點完了！🎉";
+
+      messageEl.textContent = timerChallenge.checked
+        ? `全部指定的數字都點完了！🎉 用時 ${timerDisplay.textContent}`
+        : "全部指定的數字都點完了！🎉";
+
       messageEl.className = "message success";
       disableAllCells();
       showFireworks();
@@ -502,6 +587,7 @@
     function showFireworks() {
       fireworksEl.innerHTML = "";
       const dots = 26;
+
       for (let i = 0; i < dots; i++) {
         const dot = document.createElement("div");
         dot.className = "fireworks-dot";
@@ -513,6 +599,7 @@
         dot.style.setProperty("--dy", dy + "px");
         fireworksEl.appendChild(dot);
       }
+
       setTimeout(() => {
         fireworksEl.innerHTML = "";
       }, 900);
@@ -528,11 +615,13 @@
       maxNumber = n * n;
       completed = false;
 
+      resetTimer();
       createGrid();
     }
 
     resetBtn.addEventListener("click", resetGame);
     sizeInput.addEventListener("change", resetGame);
+    timerChallenge.addEventListener("change", resetTimer);
 
     window.addEventListener(
       "pointerdown",
