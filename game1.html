@@ -32,7 +32,6 @@
       overflow: hidden;
     }
 
-    /* 手機上讓遊戲區域更大 */
     @media (max-width: 600px) {
       body {
         align-items: stretch;
@@ -107,13 +106,14 @@
       margin-bottom: 10px;
       font-size: 14px;
       color: #475569;
+      flex-wrap: wrap;
     }
 
     .controls label {
       white-space: nowrap;
     }
 
-    .controls input {
+    .controls input[type="number"] {
       width: 70px;
       padding: 5px 8px;
       border-radius: 999px;
@@ -122,9 +122,25 @@
       font-size: 14px;
     }
 
-    .controls input:focus {
+    .controls input[type="number"]:focus {
       border-color: #3b82f6;
       box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
+    }
+
+    .timer-option {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .timer-option input {
+      width: auto;
+    }
+
+    .timer-display {
+      font-weight: 700;
+      color: #0f172a;
+      min-width: 72px;
     }
 
     .controls button {
@@ -178,7 +194,6 @@
       box-shadow: 0 2px 0 rgba(15, 23, 42, 0.1);
       transition: transform 0.08s ease, box-shadow 0.08s ease,
         background 0.12s ease, color 0.12s ease;
-      /* 5:4 比例 */
       aspect-ratio: 5 / 4;
       padding: 0;
     }
@@ -243,7 +258,6 @@
       text-decoration: underline;
     }
 
-    /* 完成動畫 */
     .completed .grid {
       animation: celebrate 0.9s ease-in-out;
     }
@@ -323,6 +337,14 @@
         step="1"
         value="4"
       />
+
+      <label class="timer-option">
+        <input type="checkbox" id="timerChallenge" />
+        計時挑戰
+      </label>
+
+      <span id="timerDisplay" class="timer-display">00:00.00</span>
+
       <button id="resetBtn">再一次</button>
     </div>
 
@@ -344,12 +366,19 @@
     const resetBtn = document.getElementById("resetBtn");
     const container = document.getElementById("gameContainer");
     const fireworksEl = document.getElementById("fireworks");
+    const timerChallenge = document.getElementById("timerChallenge");
+    const timerDisplay = document.getElementById("timerDisplay");
 
     let n = 4;
     let nextNumber = 1;
     let maxNumber = n * n;
     let completed = false;
     let audioCtx = null;
+
+    let timerStarted = false;
+    let timerStartTime = 0;
+    let timerInterval = null;
+    let elapsedTime = 0;
 
     function initAudio() {
       if (!audioCtx) {
@@ -393,6 +422,50 @@
       initAudio();
       if (!audioCtx) return;
       playTone(220, 0.22, "square", 0.22);
+    }
+
+    function formatTime(ms) {
+      const totalSeconds = ms / 1000;
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = Math.floor(totalSeconds % 60);
+      const centiseconds = Math.floor((ms % 1000) / 10);
+
+      return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
+        2,
+        "0"
+      )}.${String(centiseconds).padStart(2, "0")}`;
+    }
+
+    function startTimer() {
+      if (!timerChallenge.checked || timerStarted) return;
+
+      timerStarted = true;
+      timerStartTime = performance.now();
+
+      timerInterval = setInterval(() => {
+        elapsedTime = performance.now() - timerStartTime;
+        timerDisplay.textContent = formatTime(elapsedTime);
+      }, 30);
+    }
+
+    function stopTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+
+      if (timerStarted) {
+        elapsedTime = performance.now() - timerStartTime;
+        timerDisplay.textContent = formatTime(elapsedTime);
+      }
+    }
+
+    function resetTimer() {
+      stopTimer();
+      timerStarted = false;
+      timerStartTime = 0;
+      elapsedTime = 0;
+      timerDisplay.textContent = "00:00.00";
     }
 
     function shuffle(array) {
@@ -439,6 +512,8 @@
       const value = parseInt(cell.dataset.value, 10);
 
       if (value === nextNumber) {
+        startTimer();
+
         cell.classList.add("correct");
         playSuccessSound(nextNumber === maxNumber);
 
@@ -455,7 +530,6 @@
       }
     }
 
-    // 點錯：只發錯誤音效與提示，但可以繼續玩
     function handleWrong() {
       playErrorSound();
       messageEl.textContent = `點錯了！下一個應該是 ${nextNumber} 喔～`;
@@ -463,11 +537,17 @@
     }
 
     function handleComplete() {
+      stopTimer();
+
       completed = true;
       statusBadge.textContent = "挑戰成功";
       statusBadge.style.background = "#dcfce7";
       statusBadge.style.color = "#15803d";
-      messageEl.textContent = "全部完成！太強了 🎉";
+
+      messageEl.textContent = timerChallenge.checked
+        ? `全部完成！太強了 🎉 用時 ${timerDisplay.textContent}`
+        : "全部完成！太強了 🎉";
+
       messageEl.className = "message success";
       disableAllCells();
       showFireworks();
@@ -510,11 +590,14 @@
       nextNumber = 1;
       completed = false;
 
+      resetTimer();
       createGrid();
     }
 
     resetBtn.addEventListener("click", resetGame);
     sizeInput.addEventListener("change", resetGame);
+
+    timerChallenge.addEventListener("change", resetTimer);
 
     window.addEventListener(
       "pointerdown",
